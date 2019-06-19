@@ -38,7 +38,13 @@
             $this->paramName = $paramName;
             $this->cycle = $cycle;
 
-            parent::__construct(sprintf('Can not inject parameter: $%s in %s::%s', $paramName, $class, $method));
+            if (!empty($cycle)) {
+                parent::__construct(sprintf('Can not inject parameter: \'%s\' into \'%s::%s\' while trying to build: [%s]',
+                                            $paramName, $class, $method, implode(' -> ', $cycle)), 0, $previous);
+            } else {
+                parent::__construct(sprintf('Can not inject parameter: \'%s\' into \'%s::%s\'', $paramName, $class,
+                                            $method), 0, $previous);
+            }
         }
 
         /**

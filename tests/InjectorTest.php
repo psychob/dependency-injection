@@ -10,9 +10,14 @@
     use PsychoB\DependencyInjection\Arguments;
     use PsychoB\DependencyInjection\Container;
     use PsychoB\DependencyInjection\ContainerInterface;
+    use PsychoB\DependencyInjection\Exceptions\CantInjectParameterException;
+    use PsychoB\DependencyInjection\Exceptions\CyclicDependencyException;
     use Tests\PsychoB\DependencyInjection\Mocks\ClassWithConstructorArgument;
     use Tests\PsychoB\DependencyInjection\Mocks\ComplexConstructor;
+    use Tests\PsychoB\DependencyInjection\Mocks\CyclicInjects;
     use Tests\PsychoB\DependencyInjection\Mocks\EmptyConstructor;
+    use Tests\PsychoB\DependencyInjection\Mocks\InvalidInjects;
+    use Tests\PsychoB\DependencyInjection\Mocks\LargeCyclic;
     use Tests\PsychoB\DependencyInjection\Mocks\NotExistingConstructor;
     use Tests\PsychoB\DependencyInjection\TestCase;
 
@@ -55,7 +60,8 @@
 
         public function testExistingSimpleConstructorWithNamedArguments()
         {
-            $containerMock = $this->container->inject(ClassWithConstructorArgument::class, ['mock' => new EmptyConstructor()]);
+            $containerMock = $this->container->inject(ClassWithConstructorArgument::class,
+                                                      ['mock' => new EmptyConstructor()]);
 
             $this->assertInstanceOf(ClassWithConstructorArgument::class, $containerMock);
         }
@@ -85,7 +91,7 @@
                     return $container->make(ClassWithConstructorArgument::class);
                 });
 
-                $builder = null;
+                $builder = NULL;
             }
 
             $containerMock = $this->container->get(ComplexConstructor::class);
@@ -100,5 +106,64 @@
             $containerMock = $this->container->inject(ComplexConstructor::class, ['bar' => new EmptyConstructor()]);
 
             $this->assertInstanceOf(ComplexConstructor::class, $containerMock);
+        }
+
+        public function testBuiltinInjectsInt()
+        {
+            $this->expectException(CantInjectParameterException::class);
+            $this->expectExceptionMessage('Can not inject parameter: \'a\' into ' .
+                                          '\'Tests\PsychoB\DependencyInjection\Mocks\InvalidInjects::__construct\' ' .
+                                          'while trying to build: [Tests\PsychoB\DependencyInjection\Mocks\InvalidInjects]');
+
+            $this->container->build(InvalidInjects::class)->autoWire();
+
+            $this->container->make(InvalidInjects::class);
+        }
+
+        public function testBuiltinInjectsFloat()
+        {
+            $this->expectException(CantInjectParameterException::class);
+            $this->expectExceptionMessage('Can not inject parameter: \'b\' into ' .
+                                          '\'Tests\PsychoB\DependencyInjection\Mocks\InvalidInjects::__construct\' ' .
+                                          'while trying to build: [Tests\PsychoB\DependencyInjection\Mocks\InvalidInjects]');
+
+            $this->container->build(InvalidInjects::class)->autoWire();
+
+            $this->container->make(InvalidInjects::class, ['a' => 1]);
+        }
+
+        public function testBuiltinInjectsString()
+        {
+            $this->expectException(CantInjectParameterException::class);
+            $this->expectExceptionMessage('Can not inject parameter: \'c\' into ' .
+                                          '\'Tests\PsychoB\DependencyInjection\Mocks\InvalidInjects::__construct\' ' .
+                                          'while trying to build: [Tests\PsychoB\DependencyInjection\Mocks\InvalidInjects]');
+
+            $this->container->build(InvalidInjects::class)->autoWire();
+
+            $this->container->make(InvalidInjects::class, ['a' => 1, 'b' => 2]);
+        }
+
+        public function testBuiltinInjectsSimpleCyclicInject()
+        {
+            $this->expectException(CyclicDependencyException::class);
+            $this->expectExceptionMessage('Detected cyclic dependency while trying to build: ' .
+                                          '[Tests\PsychoB\DependencyInjection\Mocks\CyclicInjects]');
+
+            $this->container->build(CyclicInjects::class)->autoWire();
+
+            $this->container->make(CyclicInjects::class);
+        }
+
+        public function testBuiltinInjectsComplexCyclicInject()
+        {
+            $this->expectException(CyclicDependencyException::class);
+            $this->expectExceptionMessage('Detected cyclic dependency while trying to build: ' .
+                                          '[Tests\PsychoB\DependencyInjection\Mocks\LargeCyclic <- ' .
+                                          'Tests\PsychoB\DependencyInjection\Mocks\SmallCyclic]');
+
+            $this->container->build(LargeCyclic::class)->autoWire();
+
+            $this->container->make(LargeCyclic::class);
         }
     }

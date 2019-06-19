@@ -9,6 +9,7 @@
 
     use PsychoB\DependencyInjection\Exceptions\CantInjectParameterException;
     use PsychoB\DependencyInjection\Exceptions\ClassCantBeInjectedException;
+    use PsychoB\DependencyInjection\Exceptions\CyclicDependencyException;
     use PsychoB\DependencyInjection\Exceptions\MethodCantBeInjectedException;
     use PsychoB\DependencyInjection\Registration\ArgumentBuilder;
     use PsychoB\DependencyInjection\Registration\RegistrationEntry;
@@ -73,16 +74,30 @@
 
             [$ref_class, $ref_method] = $this->fetchReflections($class, $method);
 
-            if ($ref_method === NULL) {
-                // php will only return null for constructor that wasn't defined (so it will supply default one)
+            try {
+                if ($method === '__construct') {
+                    if (in_array($class, $this->injectingCycle)) {
+                        throw new CyclicDependencyException($class, $this->injectingCycle);
+                    }
 
-                return $this->createNewObject($class, $arguments, $def);
-            }
+                    $this->injectingCycle[] = $class;
+                }
 
-            if ($method === '__construct') {
-                return $this->createNewObjectWith($ref_class, $ref_method, $arguments, $def);
-            } else {
-                return $this->injectMethodWith($ref_class, $ref_method, $arguments, $def);
+                if ($ref_method === NULL) {
+                    // php will only return null for constructor that wasn't defined (so it will supply default one)
+
+                    return $this->createNewObject($class, $arguments, $def);
+                }
+
+                if ($method === '__construct') {
+                    return $this->createNewObjectWith($ref_class, $ref_method, $arguments, $def);
+                } else {
+                    return $this->injectMethodWith($ref_class, $ref_method, $arguments, $def);
+                }
+            } finally {
+                if ($method === '__construct') {
+                    array_pop($this->injectingCycle);
+                }
             }
         }
 
@@ -253,7 +268,7 @@
             $type = $param->getType();
             $ret = NULL;
 
-            if ($type === NULL) {
+            if ($type === NULL || $type->isBuiltin()) {
                 throw new CantInjectParameterException($className, $methodName, $param->getName(),
                                                        $this->injectingCycle);
             }

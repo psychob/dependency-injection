@@ -98,9 +98,9 @@
             return $this->buildDefinitions[$class] ?? NULL;
         }
 
-        public function make(string $class)
+        public function make(string $class, array $arguments = [])
         {
-            $new = $this->injector->make($class);
+            $new = $this->injector->make($class, $arguments);
 
             $this->add($class, $new);
 

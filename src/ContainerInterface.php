@@ -24,5 +24,5 @@
 
         public function getEntry(string $class): ?RegistrationEntry;
 
-        public function make(string $class);
+        public function make(string $class, array $arguments = []);
     }

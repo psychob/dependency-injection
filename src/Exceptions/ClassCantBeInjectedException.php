@@ -11,18 +11,26 @@
     {
         /** @var string */
         protected $class;
+        protected $cycle;
 
         /**
          * ClassCantBeInjectedException constructor.
          *
          * @param string          $class
+         * @param array           $cycle
          * @param \Throwable|null $previous
          */
-        public function __construct(string $class, ?\Throwable $previous = NULL)
+        public function __construct(string $class, array $cycle, ?\Throwable $previous = NULL)
         {
             $this->class = $class;
+            $this->cycle = $cycle;
 
-            parent::__construct(sprintf("Can not inject class %s", $class), 0, $previous);
+            if (!empty($cycle)) {
+                parent::__construct(sprintf('Can not inject class \'%s\' while trying to build: [%s]', $class,
+                                            implode(' -> ', $cycle)), 0, $previous);
+            } else {
+                parent::__construct(sprintf("Can not inject class '%s'", $class), 0, $previous);
+            }
         }
 
         /**
