@@ -1,0 +1,38 @@
+{
+    "name": "psychob/dependency-injection",
+    "description": "simple dependency injection library",
+    "type": "library",
+    "require": {
+        "php": "^7.2",
+        "funkyproject/reflection-file": "^0.1.0",
+        "psr/container": "^1.0",
+        "symfony/finder": "^4.3"
+    },
+    "require-dev": {
+        "mikey179/vfsstream": "^1.6",
+        "mockery/mockery": "^1.2",
+        "phpunit/phpunit": "^8.1",
+        "symfony/var-dumper": "^4.3"
+    },
+    "license": "MPL-2.0",
+    "authors": [
+        {
+            "name": "Andrzej Budzanowski",
+            "email": "kontakt@andrzej.budzanowski.pl"
+        }
+    ],
+    "minimum-stability": "stable",
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "PsychoB\\DependencyInjection\\": "./src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\PsychoB\\DependencyInjection\\": "./tests"
+        }
+    }
+}
