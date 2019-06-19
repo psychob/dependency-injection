@@ -7,11 +7,11 @@
 
     namespace PsychoB\DependencyInjection;
 
-    use Funkyproject\ReflectionFile;
     use PsychoB\DependencyInjection\Exceptions\AmbiguousInterfaceInitializationException;
     use PsychoB\DependencyInjection\Exceptions\ClassNotFoundException;
     use PsychoB\DependencyInjection\Registration\RegistrationBuilder;
     use PsychoB\DependencyInjection\Registration\RegistrationEntry;
+    use PsychoB\ReflectionFile\ReflectionFile;
     use Symfony\Component\Finder\Finder;
 
     class Container implements ContainerInterface
@@ -131,11 +131,14 @@
                 foreach ($finder as $file) {
                     $file = new ReflectionFile($file->getRealPath());
 
-                    foreach ($file->getInterfaceNames() as $interface) {
-                        $this->interfaces[$interface][] = $file->getName();
-                    }
+                    foreach ($file->getClasses() as $class) {
+                        foreach ($class->getInterfaceNames() as $interface) {
+                            $this->interfaces[$interface][] = $class->getName();
+                        }
 
-                    $this->buildDefinitions[$file->getName()] = new RegistrationEntry($file->getName(), true, [], true);
+                        $this->buildDefinitions[$class->getName()] = new RegistrationEntry($class->getName(), true, [],
+                                                                                           true);
+                    }
                 }
             }
         }

@@ -47,4 +47,15 @@
 
             $this->assertInstanceOf(ClassWithConstructorArgument::class, $mock);
         }
+
+        public function testAutoWireSrc()
+        {
+            $container = new Container();
+
+            // this will throw exception on error
+            $container->autowirePath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'src');
+
+            $this->assertTrue(true);
+        }
+
     }
