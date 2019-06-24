@@ -11,6 +11,7 @@
     use PsychoB\DependencyInjection\Container;
     use PsychoB\DependencyInjection\ContainerInterface;
     use PsychoB\DependencyInjection\Exceptions\CantInjectParameterException;
+    use PsychoB\DependencyInjection\Exceptions\ClassCantBeInjectedException;
     use PsychoB\DependencyInjection\Exceptions\CyclicDependencyException;
     use Tests\PsychoB\DependencyInjection\Mocks\ClassWithConstructorArgument;
     use Tests\PsychoB\DependencyInjection\Mocks\ComplexConstructor;
@@ -165,5 +166,77 @@
             $this->container->build(LargeCyclic::class)->autoWire();
 
             $this->container->make(LargeCyclic::class);
+        }
+
+        public function testInjectNormalMethod()
+        {
+            $empty = new EmptyConstructor();
+
+            $this->container->injectMethod($empty, 'functionWithMultipleParameters', [
+                'foo' => 1,
+                'bar' => 'baz',
+                'baz' => true,
+            ]);
+
+            $this->assertTrue(true);
+        }
+
+        public function testInjectMethodNotExists()
+        {
+            $this->expectException(ClassCantBeInjectedException::class);
+
+            $empty = new EmptyConstructor();
+
+            $this->container->injectMethod($empty, 'functionNotExists', [
+                'foo' => 1,
+                'bar' => 'baz',
+                'baz' => true,
+            ]);
+        }
+
+        public function testInjectStaticMethod()
+        {
+            $this->container->injectMethod(EmptyConstructor::class, 'staticFunctionWithMultipleParameters', [
+                'foo' => 1,
+                'bar' => 'baz',
+                'baz' => true,
+            ]);
+
+            $this->assertTrue(true);
+        }
+
+        public function testInjectStaticMethodNotExists()
+        {
+            $this->expectException(ClassCantBeInjectedException::class);
+
+            $this->container->injectMethod(EmptyConstructor::class, 'staticFunctionDosentExists', [
+                'foo' => 1,
+                'bar' => 'baz',
+                'baz' => true,
+            ]);
+
+        }
+
+        public function testInjectWithFactory()
+        {
+            $this->container->build(ClassWithConstructorArgument::class)
+                            ->argument('mock')
+                            ->factory(function (ContainerInterface $cont) {
+                                return $cont->make(EmptyConstructor::class);
+                            });
+
+            $this->assertInstanceOf(ClassWithConstructorArgument::class,
+                                    $this->container->get(ClassWithConstructorArgument::class));
+        }
+
+        public function testMakeWithFactory()
+        {
+            $this->container->build(ClassWithConstructorArgument::class)
+                            ->factory(function (ContainerInterface $cont) {
+                                return new ClassWithConstructorArgument($cont->make(EmptyConstructor::class));
+                            });
+
+            $this->assertInstanceOf(ClassWithConstructorArgument::class,
+                                    $this->container->get(ClassWithConstructorArgument::class));
         }
     }

@@ -12,4 +12,14 @@
         public function __construct()
         {
         }
+
+        public function functionWithMultipleParameters(ClassWithConstructorArgument $arg, int $foo, string $bar, $baz,
+                                                       NotExistingConstructor $const)
+        {
+        }
+
+        public static function staticFunctionWithMultipleParameters(ClassWithConstructorArgument $arg, int $foo,
+                                                                    string $bar, $baz, NotExistingConstructor $const)
+        {
+        }
     }

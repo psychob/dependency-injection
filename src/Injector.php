@@ -62,7 +62,7 @@
             } else if (is_callable($func)) {
                 return $this->injectIntoFunction($func, $arguments);
             } else {
-                throw InvalidArgumentException::invalidCallable('$func', 'Callable array must have only two arguments');
+                throw InvalidArgumentException::invalidCallable('$func', 'Callable must be array or callable');
             }
         }
 
@@ -84,8 +84,15 @@
                     return $ref_class->newInstance();
                 }
 
-                $args = $this->fetchArgumentsFrom($ref_constructor, $arguments, $this->container->getEntry($class),
-                                                  $class);
+                $definition = $this->container->getEntry($class);
+
+                if ($definition !== null) {
+                    if ($definition->getBindType() !== BindType::BIND_TYPE_NONE) {
+                        return $this->resolveBind($definition->getBindType(), $definition->getBind());
+                    }
+                }
+
+                $args = $this->fetchArgumentsFrom($ref_constructor, $arguments, $definition, $class);
                 return $ref_class->newInstance(...$args);
             } finally {
                 array_pop($this->injectingCycle);
@@ -268,19 +275,20 @@
                 case BindType::BIND_TYPE_FACTORY:
                     return $this->inject($bind);
 
+                // @codeCoverageIgnoreStart
                 default:
                     throw new InternalException("Unknown bind type: {$type}");
+                // @codeCoverageIgnoreEnd
             }
         }
 
         protected function injectIntoObject($object, string $method, array $arguments)
         {
-            /** @noinspection PhpUnhandledExceptionInspection */
-            $ref_class = new ReflectionClass($object);
             try {
+                $ref_class = new ReflectionClass($object);
                 $ref_method = $ref_class->getMethod($method);
             } catch (ReflectionException $e) {
-                throw new ClassCantBeInjectedException($ref_class->getName(), $this->injectingCycle, $e);
+                throw new ClassCantBeInjectedException(get_class($object), $this->injectingCycle, $e);
             }
 
             $args = $this->fetchArgumentsFrom($ref_method, $arguments,
@@ -290,12 +298,11 @@
 
         protected function injectIntoStatic(string $className, string $method, array $arguments)
         {
-            /** @noinspection PhpUnhandledExceptionInspection */
-            $ref_class = new ReflectionClass($className);
             try {
+                $ref_class = new ReflectionClass($className);
                 $ref_method = $ref_class->getMethod($method);
             } catch (ReflectionException $e) {
-                throw new ClassCantBeInjectedException($ref_class->getName(), $this->injectingCycle, $e);
+                throw new ClassCantBeInjectedException($className, $this->injectingCycle, $e);
             }
 
             $args = $this->fetchArgumentsFrom($ref_method, $arguments,
