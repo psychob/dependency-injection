@@ -9,6 +9,7 @@
 
     use PsychoB\DependencyInjection\ContainerInterface;
     use PsychoB\DependencyInjection\Registration\ArgumentBuilder;
+    use PsychoB\DependencyInjection\Registration\BindType;
     use PsychoB\DependencyInjection\Registration\RegistrationBuilder;
     use PsychoB\DependencyInjection\Registration\RegistrationEntry;
 
@@ -66,27 +67,27 @@
 
                 $this->assertEquals(ArgumentBuilder::ARGUMENT_TYPE_NAMED, $serialized->getArguments()[0]['type']);
                 $this->assertEquals('foo', $serialized->getArguments()[0]['id']);
-                $this->assertEquals(ArgumentBuilder::BIND_TYPE_CLASS, $serialized->getArguments()[0]['bind_type']);
+                $this->assertEquals(BindType::BIND_TYPE_CLASS, $serialized->getArguments()[0]['bind_type']);
                 $this->assertEquals('Abc', $serialized->getArguments()[0]['bind']);
 
                 $this->assertEquals(ArgumentBuilder::ARGUMENT_TYPE_POSITIONAL, $serialized->getArguments()[1]['type']);
                 $this->assertEquals(1, $serialized->getArguments()[1]['id']);
-                $this->assertEquals(ArgumentBuilder::BIND_TYPE_CLASS, $serialized->getArguments()[1]['bind_type']);
+                $this->assertEquals(BindType::BIND_TYPE_CLASS, $serialized->getArguments()[1]['bind_type']);
                 $this->assertEquals('Def', $serialized->getArguments()[1]['bind']);
 
                 $this->assertEquals(ArgumentBuilder::ARGUMENT_TYPE_POSITIONAL, $serialized->getArguments()[2]['type']);
                 $this->assertEquals(2, $serialized->getArguments()[2]['id']);
-                $this->assertEquals(ArgumentBuilder::BIND_TYPE_CLASS, $serialized->getArguments()[2]['bind_type']);
+                $this->assertEquals(BindType::BIND_TYPE_CLASS, $serialized->getArguments()[2]['bind_type']);
                 $this->assertEquals('Gha', $serialized->getArguments()[2]['bind']);
 
                 $this->assertEquals(ArgumentBuilder::ARGUMENT_TYPE_POSITIONAL, $serialized->getArguments()[3]['type']);
                 $this->assertEquals(3, $serialized->getArguments()[3]['id']);
-                $this->assertEquals(ArgumentBuilder::BIND_TYPE_LITERAL, $serialized->getArguments()[3]['bind_type']);
+                $this->assertEquals(BindType::BIND_TYPE_LITERAL, $serialized->getArguments()[3]['bind_type']);
                 $this->assertEquals('foo', $serialized->getArguments()[3]['bind']);
 
                 $this->assertEquals(ArgumentBuilder::ARGUMENT_TYPE_POSITIONAL, $serialized->getArguments()[4]['type']);
                 $this->assertEquals(4, $serialized->getArguments()[4]['id']);
-                $this->assertEquals(ArgumentBuilder::BIND_TYPE_FUNCTION, $serialized->getArguments()[4]['bind_type']);
+                $this->assertEquals(BindType::BIND_TYPE_FUNCTION, $serialized->getArguments()[4]['bind_type']);
                 $this->assertIsCallable($serialized->getArguments()[4]['bind']);
 
                 return true;

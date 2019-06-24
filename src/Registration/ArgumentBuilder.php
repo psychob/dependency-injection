@@ -9,11 +9,9 @@
 
     class ArgumentBuilder
     {
-        const BIND_TYPE_FUNCTION = 'function';
-        const BIND_TYPE_CLASS = 'class';
-        const BIND_TYPE_LITERAL = 'literal';
         const ARGUMENT_TYPE_NAMED = 'named';
         const ARGUMENT_TYPE_POSITIONAL = 'positional';
+
         /** @var RegistrationBuilder */
         protected $builder;
 
@@ -51,9 +49,9 @@
         public function bind($class): self
         {
             if (is_callable($class)) {
-                $this->bindType = self::BIND_TYPE_FUNCTION;
+                $this->bindType = BindType::BIND_TYPE_FUNCTION;
             } else {
-                $this->bindType = self::BIND_TYPE_CLASS;
+                $this->bindType = BindType::BIND_TYPE_CLASS;
             }
 
             $this->bind = $class;
@@ -62,8 +60,16 @@
 
         public function literal($literal): self
         {
-            $this->bindType = self::BIND_TYPE_LITERAL;
+            $this->bindType = BindType::BIND_TYPE_LITERAL;
             $this->bind = $literal;
+
+            return $this;
+        }
+
+        public function factory($class): self
+        {
+            $this->bindType = BindType::BIND_TYPE_FACTORY;
+            $this->bind = $class;
 
             return $this;
         }

@@ -29,6 +29,12 @@
         /** @var bool */
         protected $isSingleton = true;
 
+        /** @var string */
+        protected $bindType = BindType::BIND_TYPE_NONE;
+
+        /** @var callable|object|string */
+        protected $bind;
+
         /**
          * RegistrationBuilder constructor.
          *
@@ -78,7 +84,36 @@
 
         public function serialize()
         {
-            return new RegistrationEntry($this->name, $this->autoWire, $this->arguments, $this->isSingleton);
+            return new RegistrationEntry($this->name, $this->autoWire, $this->arguments, $this->isSingleton, $this->bindType, $this->bind);
+        }
+
+        public function literal($object): self
+        {
+            $this->bindType = BindType::BIND_TYPE_LITERAL;
+            $this->bind = $object;
+
+            return $this;
+        }
+
+        public function bind($object): self
+        {
+            if (is_callable($object)) {
+                $this->bindType = BindType::BIND_TYPE_FUNCTION;
+            } else {
+                $this->bindType = BindType::BIND_TYPE_CLASS;
+            }
+
+            $this->bind = $object;
+
+            return $this;
+        }
+
+        public function factory($class): self
+        {
+            $this->bindType = BindType::BIND_TYPE_FACTORY;
+            $this->bind = $class;
+
+            return $this;
         }
 
         public function __fetchArgumentBuilder(ArgumentBuilder $builder): void

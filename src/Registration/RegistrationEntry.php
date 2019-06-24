@@ -13,21 +13,28 @@
         protected $isSingleton;
         protected $arguments;
         protected $autoWire;
+        protected $bindType;
+        protected $bind;
 
         /**
          * RegistrationEntry constructor.
          *
-         * @param string $name
-         * @param bool   $autoWire
-         * @param array  $arguments
-         * @param bool   $isSingleton
+         * @param string                $name
+         * @param bool                  $autoWire
+         * @param array                 $arguments
+         * @param bool                  $isSingleton
+         * @param string                $bindType
+         * @param object|callable|mixed $bind
          */
-        public function __construct(string $name, bool $autoWire, array $arguments, bool $isSingleton)
+        public function __construct(string $name, bool $autoWire, array $arguments, bool $isSingleton, string $bindType,
+                                    $bind)
         {
             $this->name = $name;
             $this->arguments = $arguments;
             $this->autoWire = $autoWire;
             $this->isSingleton = $isSingleton;
+            $this->bindType = $bindType;
+            $this->bind = $bind;
         }
 
         /**
@@ -62,14 +69,34 @@
             return $this->isSingleton;
         }
 
+        /**
+         * @return string
+         */
+        public function getBindType(): string
+        {
+            return $this->bindType;
+        }
+
+        /**
+         * @return callable|mixed|object
+         */
+        public function getBind()
+        {
+            return $this->bind;
+        }
+
         public function canBeCached(): bool
         {
             if (!$this->isSingleton) {
                 return false;
             }
 
+            if (in_array($this->bindType, [BindType::BIND_TYPE_LITERAL, BindType::BIND_TYPE_FUNCTION])) {
+                return false;
+            }
+
             foreach ($this->arguments as $argument) {
-                if ($argument['bind_type'] !== ArgumentBuilder::BIND_TYPE_FUNCTION) {
+                if ($argument['bind_type'] !== BindType::BIND_TYPE_FUNCTION) {
                     return false;
                 }
             }

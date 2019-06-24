@@ -12,6 +12,7 @@
     use PsychoB\DependencyInjection\Exceptions\CyclicDependencyException;
     use PsychoB\DependencyInjection\Exceptions\MethodCantBeInjectedException;
     use PsychoB\DependencyInjection\Registration\ArgumentBuilder;
+    use PsychoB\DependencyInjection\Registration\BindType;
     use PsychoB\DependencyInjection\Registration\RegistrationEntry;
 
     class Injector
@@ -66,6 +67,10 @@
             $args = $this->fetchArgumentsFrom_TP($ref_func, $arguments);
 
             return $ref_func->invoke(...$args);
+        }
+
+        public function injectMethod($object, string $method, array $arguments)
+        {
         }
 
         private function injectImpl(string $class, string $method, array $arguments)
@@ -298,23 +303,33 @@
             $actual = $nDef ?? $pDef;
 
             if ($actual) {
-                switch ($actual['bind_type']) {
-                    case ArgumentBuilder::BIND_TYPE_LITERAL:
-                        return [$actual['bind'], true];
-
-                    case ArgumentBuilder::BIND_TYPE_CLASS:
-                        if ($this->container->has($actual['bind'])) {
-                            return [$this->container->get($actual['bind']), true];
-                        } else {
-                            return [$this->container->make($actual['bind']), true];
-                        }
-                        break;
-
-                    case ArgumentBuilder::BIND_TYPE_FUNCTION:
-                        return [$this->injectFunction($actual['bind']), true];
-                }
+                return [$this->resolveBind($actual['bind_type'], $actual['bind']), true];
             }
 
             return [NULL, false];
+        }
+
+        private function resolveBind(string $type, $bind)
+        {
+            switch ($type) {
+                case BindType::BIND_TYPE_LITERAL:
+                    return $bind;
+
+                case BindType::BIND_TYPE_CLASS:
+                    if ($this->container->has($bind)) {
+                        return $this->container->get($bind);
+                    } else {
+                        return $this->container->make($bind);
+                    }
+
+                case BindType::BIND_TYPE_FUNCTION:
+                    return $this->injectFunction($bind);
+
+                case BindType::BIND_TYPE_FACTORY:
+                    return $this->injectFunction($bind);
+
+                default:
+                    throw new InternalException("Unknown bind type: {$type}");
+            }
         }
     }

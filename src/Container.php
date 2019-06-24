@@ -9,6 +9,7 @@
 
     use PsychoB\DependencyInjection\Exceptions\AmbiguousInterfaceInitializationException;
     use PsychoB\DependencyInjection\Exceptions\ClassNotFoundException;
+    use PsychoB\DependencyInjection\Registration\BindType;
     use PsychoB\DependencyInjection\Registration\RegistrationBuilder;
     use PsychoB\DependencyInjection\Registration\RegistrationEntry;
     use PsychoB\ReflectionFile\ReflectionFile;
@@ -42,9 +43,9 @@
         /** @inheritDoc */
         public function has(string $class): bool
         {
-            return array_key_exists($class, $this->initialized) ||
-                array_key_exists($class, $this->buildDefinitions) ||
-                array_key_exists($class, $this->interfaces);
+            return array_key_exists($class, $this->initialized) || array_key_exists($class,
+                                                                                    $this->buildDefinitions) || array_key_exists($class,
+                                                                                                                                 $this->interfaces);
         }
 
         /** @inheritDoc */
@@ -129,6 +130,8 @@
 
             if ($finder->hasResults()) {
                 foreach ($finder as $file) {
+                    dump($file->getRealPath());
+
                     $file = new ReflectionFile($file->getRealPath());
 
                     foreach ($file->getClasses() as $class) {
@@ -137,7 +140,9 @@
                         }
 
                         $this->buildDefinitions[$class->getName()] = new RegistrationEntry($class->getName(), true, [],
-                                                                                           true);
+                                                                                           true,
+                                                                                           BindType::BIND_TYPE_NONE,
+                                                                                           NULL);
                     }
                 }
             }
