@@ -10,12 +10,14 @@
     use PsychoB\DependencyInjection\Exceptions\CantInjectParameterException;
     use PsychoB\DependencyInjection\Exceptions\ClassCantBeInjectedException;
     use PsychoB\DependencyInjection\Exceptions\CyclicDependencyException;
-    use PsychoB\DependencyInjection\Exceptions\MethodCantBeInjectedException;
-    use PsychoB\DependencyInjection\Registration\ArgumentBuilder;
     use PsychoB\DependencyInjection\Registration\BindType;
     use PsychoB\DependencyInjection\Registration\RegistrationEntry;
+    use ReflectionClass;
+    use ReflectionException;
+    use ReflectionFunction;
+    use ReflectionFunctionAbstract;
 
-    class Injector
+    class Injector implements InjectorInterface
     {
         /** @var ContainerInterface */
         protected $container;
@@ -33,124 +35,82 @@
             $this->container = $container;
         }
 
-        /**
-         * @param string $class
-         * @param array  $arguments
-         *
-         * @return mixed
-         */
+        /** @inheritDoc */
         public function make(string $class, array $arguments = [])
         {
-            return $this->inject($class, '__construct', $arguments);
+            return $this->inject([$class, '__construct'], $arguments);
         }
 
-        /**
-         * @param string $class
-         * @param string $method
-         * @param array  $arguments
-         *
-         * @return mixed
-         */
-        public function inject($class, string $method, array $arguments = [])
+        /** @inheritDoc */
+        public function inject($func, array $arguments = [])
         {
-            if (is_object($class)) {
-                return $this->injectMethod($class, $method, $arguments);
-            } else {
-                return $this->injectImpl($class, $method, $arguments);
-            }
-        }
-
-        public function injectFunction(callable $callable, array $arguments = [])
-        {
-            $ref_func = new \ReflectionFunction($callable);
-
-            $args = $this->fetchArgumentsFrom_TP($ref_func, $arguments);
-
-            return $ref_func->invoke(...$args);
-        }
-
-        public function injectMethod($object, string $method, array $arguments)
-        {
-        }
-
-        private function injectImpl(string $class, string $method, array $arguments)
-        {
-            $def = $this->container->getEntry($class);
-
-            [$ref_class, $ref_method] = $this->fetchReflections($class, $method);
-
-            try {
-                if ($method === '__construct') {
-                    if (in_array($class, $this->injectingCycle)) {
-                        throw new CyclicDependencyException($class, $this->injectingCycle);
+            if (is_array($func)) {
+                if (count($func) === 2) {
+                    if ($func[1] === '__construct') {
+                        return $this->makeNewInstance($func[0], $arguments);
+                    } else {
+                        if (is_object($func[0])) {
+                            return $this->injectIntoObject($func[0], $func[1], $arguments);
+                        } else {
+                            return $this->injectIntoStatic($func[0], $func[1], $arguments);
+                        }
                     }
-
-                    $this->injectingCycle[] = $class;
-                }
-
-                if ($ref_method === NULL) {
-                    // php will only return null for constructor that wasn't defined (so it will supply default one)
-
-                    return $this->createNewObject($class, $arguments, $def);
-                }
-
-                if ($method === '__construct') {
-                    return $this->createNewObjectWith($ref_class, $ref_method, $arguments, $def);
                 } else {
-                    return $this->injectMethodWith($ref_class, $ref_method, $arguments, $def);
+                    throw InvalidArgumentException::invalidCallable('$func',
+                                                                    'Callable array must have only two arguments');
                 }
-            } finally {
-                if ($method === '__construct') {
-                    array_pop($this->injectingCycle);
-                }
-            }
-        }
-
-        private function fetchReflections(string $class, string $method): array
-        {
-            try {
-                $ref_class = new \ReflectionClass($class);
-            } catch (\ReflectionException $e) {
-                throw new ClassCantBeInjectedException($class, $this->injectingCycle, $e);
-            }
-
-            if ($method === '__construct') {
-                return [$ref_class, $ref_class->getConstructor()];
-            }
-
-            try {
-                $ref_method = $ref_class->getMethod($method);
-            } catch (\ReflectionException $e) {
-                throw new MethodCantBeInjectedException($class, $method, $this->injectingCycle, $e);
-            }
-
-            return [$ref_class, $ref_method];
-        }
-
-        private function createNewObject(string $class, array $arguments, ?RegistrationEntry $def)
-        {
-            return new $class(...$arguments);
-        }
-
-        private function createNewObjectWith(\ReflectionClass $ref_class, \ReflectionMethod $ref_method,
-                                             array $arguments, ?RegistrationEntry $def)
-        {
-            if (empty($ref_method->getParameters())) {
-                return $this->createNewObject($ref_class->getName(), $arguments, $def);
-            }
-
-            $args = [];
-
-            if (empty($arguments)) {
-                $args = $this->fetchArgumentsFromVoid($ref_class, $ref_method, $def);
+            } else if (is_callable($func)) {
+                return $this->injectIntoFunction($func, $arguments);
             } else {
-                $args = $this->fetchArgumentsFromList($ref_class, $ref_method, $arguments, $def);
+                throw InvalidArgumentException::invalidCallable('$func', 'Callable array must have only two arguments');
             }
-
-            return $ref_class->newInstance(...$args);
         }
 
-        private function fetchArgumentsFrom_T(\ReflectionFunctionAbstract $ref, string $className = 'anonymous'): array
+        protected function makeNewInstance(string $class, array $arguments)
+        {
+            try {
+                if (in_array($class, $this->injectingCycle)) {
+                    throw new CyclicDependencyException($class, $this->injectingCycle);
+                }
+
+                $this->injectingCycle[] = $class;
+
+                /** @noinspection PhpUnhandledExceptionInspection */
+                $ref_class = new ReflectionClass($class);
+                $ref_constructor = $ref_class->getConstructor();
+
+                if ($ref_constructor === NULL) {
+                    // default - not defined - constructor
+                    return $ref_class->newInstance();
+                }
+
+                $args = $this->fetchArgumentsFrom($ref_constructor, $arguments, $this->container->getEntry($class),
+                                                  $class);
+                return $ref_class->newInstance(...$args);
+            } finally {
+                array_pop($this->injectingCycle);
+            }
+        }
+
+        protected function fetchArgumentsFrom(ReflectionFunctionAbstract $method, array $arguments,
+                                              ?RegistrationEntry $def, string $className = 'anonymous'): array
+        {
+            if ($def === NULL) {
+                if (empty($arguments)) {
+                    return $this->fetchArgumentsFrom_T($method, $className);
+                } else {
+                    return $this->fetchArgumentsFrom_TP($method, $arguments, $className);
+                }
+            } else {
+                if (empty($arguments)) {
+                    return $this->fetchArgumentsFrom_TD($method, $def, $className);
+                } else {
+                    return $this->fetchArgumentsFrom_TPD($method, $arguments, $def, $className);
+                }
+            }
+        }
+
+        protected function fetchArgumentsFrom_T(ReflectionFunctionAbstract $ref, string $className = 'anonymous'): array
         {
             $ret = [];
 
@@ -161,8 +121,8 @@
             return $ret;
         }
 
-        private function fetchArgumentsFrom_TP(\ReflectionFunctionAbstract $ref, array $parameters,
-                                               string $className = 'anonymous'): array
+        protected function fetchArgumentsFrom_TP(ReflectionFunctionAbstract $ref, array $parameters,
+                                                 string $className = 'anonymous'): array
         {
             if (empty($parameters)) {
                 return $this->fetchArgumentsFrom_T($ref, $className);
@@ -186,8 +146,8 @@
             }
         }
 
-        private function fetchArgumentsFrom_TD(\ReflectionFunctionAbstract $ref, RegistrationEntry $def,
-                                               string $className = 'anonymous'): array
+        protected function fetchArgumentsFrom_TD(ReflectionFunctionAbstract $ref, RegistrationEntry $def,
+                                                 string $className = 'anonymous'): array
         {
             if ($def->isAutoWire() && empty($def->getArguments())) {
                 return $this->fetchArgumentsFrom_T($ref, $className);
@@ -211,8 +171,8 @@
             }
         }
 
-        private function fetchArgumentsFrom_TPD(\ReflectionFunctionAbstract $ref, array $arguments,
-                                                RegistrationEntry $def, string $className = 'anonymous'): array
+        protected function fetchArgumentsFrom_TPD(ReflectionFunctionAbstract $ref, array $arguments,
+                                                  RegistrationEntry $def, string $className = 'anonymous'): array
         {
             if ($def->isAutoWire() && empty($def->getArguments())) {
                 return $this->fetchArgumentsFrom_TP($ref, $arguments, $className);
@@ -247,28 +207,8 @@
             }
         }
 
-        private function fetchArgumentsFromVoid(\ReflectionClass $ref_class, \ReflectionMethod $ref_method,
-                                                ?RegistrationEntry $def)
-        {
-            if ($def === NULL) {
-                return $this->fetchArgumentsFrom_T($ref_method, $ref_class->getName());
-            } else {
-                return $this->fetchArgumentsFrom_TD($ref_method, $def, $ref_class->getName());
-            }
-        }
-
-        private function fetchArgumentsFromList(\ReflectionClass $ref_class, \ReflectionMethod $ref_method,
-                                                array $arguments, ?RegistrationEntry $def)
-        {
-            if ($def === NULL) {
-                return $this->fetchArgumentsFrom_TP($ref_method, $arguments, $ref_class->getName());
-            } else {
-                return $this->fetchArgumentsFrom_TPD($ref_method, $arguments, $def, $ref_class->getName());
-            }
-        }
-
-        private function resolveParameterWithAutowire(\ReflectionParameter $param, string $className = 'anonymous',
-                                                      string $methodName = 'anonymous')
+        protected function resolveParameterWithAutowire(\ReflectionParameter $param, string $className = 'anonymous',
+                                                        string $methodName = 'anonymous')
         {
             $type = $param->getType();
             $ret = NULL;
@@ -287,9 +227,9 @@
             return $ret;
         }
 
-        private function resolveParameterWithDefinition(\ReflectionParameter $param, RegistrationEntry $def,
-                                                        string $className = 'anonymous',
-                                                        string $methodName = 'anonymous')
+        protected function resolveParameterWithDefinition(\ReflectionParameter $param, RegistrationEntry $def,
+                                                          string $className = 'anonymous',
+                                                          string $methodName = 'anonymous')
         {
             $no = $param->getPosition();
 
@@ -309,7 +249,7 @@
             return [NULL, false];
         }
 
-        private function resolveBind(string $type, $bind)
+        protected function resolveBind(string $type, $bind)
         {
             switch ($type) {
                 case BindType::BIND_TYPE_LITERAL:
@@ -323,13 +263,52 @@
                     }
 
                 case BindType::BIND_TYPE_FUNCTION:
-                    return $this->injectFunction($bind);
+                    return $this->inject($bind);
 
                 case BindType::BIND_TYPE_FACTORY:
-                    return $this->injectFunction($bind);
+                    return $this->inject($bind);
 
                 default:
                     throw new InternalException("Unknown bind type: {$type}");
             }
+        }
+
+        protected function injectIntoObject($object, string $method, array $arguments)
+        {
+            /** @noinspection PhpUnhandledExceptionInspection */
+            $ref_class = new ReflectionClass($object);
+            try {
+                $ref_method = $ref_class->getMethod($method);
+            } catch (ReflectionException $e) {
+                throw new ClassCantBeInjectedException($ref_class->getName(), $this->injectingCycle, $e);
+            }
+
+            $args = $this->fetchArgumentsFrom($ref_method, $arguments,
+                                              $this->container->getEntry($ref_class->getName()), $ref_class->getName());
+            return $ref_method->invoke($object, ...$args);
+        }
+
+        protected function injectIntoStatic(string $className, string $method, array $arguments)
+        {
+            /** @noinspection PhpUnhandledExceptionInspection */
+            $ref_class = new ReflectionClass($className);
+            try {
+                $ref_method = $ref_class->getMethod($method);
+            } catch (ReflectionException $e) {
+                throw new ClassCantBeInjectedException($ref_class->getName(), $this->injectingCycle, $e);
+            }
+
+            $args = $this->fetchArgumentsFrom($ref_method, $arguments,
+                                              $this->container->getEntry($ref_class->getName()), $ref_class->getName());
+            return call_user_func([$className, $method], ...$args);
+        }
+
+        protected function injectIntoFunction(callable $func, array $arguments)
+        {
+            /** @noinspection PhpUnhandledExceptionInspection */
+            $ref_method = new ReflectionFunction($func);
+
+            $args = $this->fetchArgumentsFrom($ref_method, $arguments, NULL);
+            return $ref_method->invoke(...$args);
         }
     }

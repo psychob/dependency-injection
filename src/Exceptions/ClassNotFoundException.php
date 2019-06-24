@@ -81,7 +81,7 @@
          */
         private function calculateMessage(): string
         {
-            $allElements = $this->keysInterfaces + $this->keysInitialized + $this->keysDefinitions;
+            $allElements = $this->pack(...$this->keysInterfaces, ...$this->keysInitialized, ...$this->keysDefinitions);
             $onlyClassName = [];
             $ranks = [];
             $simpleClassName = substr($this->class, (strrpos($this->class, '\\') ?? -1) + 1);
@@ -105,14 +105,26 @@
                 return $ranks[$key] >= 75;
             }, ARRAY_FILTER_USE_BOTH);
 
-            uksort($filtered, function ($left, $right) use ($ranks) {
-                return -($ranks[$left] <=> $ranks[$right]);
+            uksort($filtered, function ($left, $right) use ($ranks, $onlyClassName) {
+                $ret = -($ranks[$left] <=> $ranks[$right]);
+
+                if ($ret === 0) {
+                    $ret = ($onlyClassName[$left] <=> $onlyClassName[$right]);
+                }
+
+                return $ret;
             });
 
             if (count($filtered) > 0) {
-                return sprintf("Class '%s' was not registered, did you mean: %s", $this->class, implode(' or ', array_slice($filtered, 0, 3, false)));
+                return sprintf("Class '%s' was not registered, did you mean: %s", $this->class,
+                               implode(' or ', array_slice($filtered, 0, 3, false)));
             } else {
                 return sprintf("Class '%s' was not registered", $this->class);
             }
+        }
+
+        private function pack(...$args): array
+        {
+            return $args;
         }
     }

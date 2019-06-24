@@ -48,7 +48,8 @@
 
             $this->expectException(ClassNotFoundException::class);
             $this->expectExceptionMessage("Class 'Tests\PsychoB\DependencyInjection\Mocks\ContainerMock' was not registered, " .
-                                          "did you mean: Tests\PsychoB\DependencyInjection\Mocks\Container3Mock or " . "Tests\PsychoB\DependencyInjection\Mocks\Container2Mock or PsychoB\DependencyInjection\Container");
+                                          "did you mean: Tests\PsychoB\DependencyInjection\Mocks\Container2Mock or " .
+                                          "Tests\PsychoB\DependencyInjection\Mocks\Container3Mock or PsychoB\DependencyInjection\Container");
             $container->get(ContainerMock::class);
         }
     }

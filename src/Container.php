@@ -38,6 +38,7 @@
             $this->add(Injector::class, $this->injector);
             $this->add(Container::class, $this);
             $this->interfaces[ContainerInterface::class] = [Container::class];
+            $this->interfaces[InjectorInterface::class] = [Injector::class];
         }
 
         /** @inheritDoc */
@@ -108,14 +109,14 @@
             return $new;
         }
 
-        public function inject(string $class, ...$arguments)
+        public function inject(string $class, array $arguments = [])
         {
-            return $this->injectMethod($class, '__construct', ...$arguments);
+            return $this->injectMethod($class, '__construct', $arguments);
         }
 
-        public function injectMethod($class, string $method, ...$arguments)
+        public function injectMethod($class, string $method, array $arguments = [])
         {
-            return $this->injector->inject($class, $method, ...$arguments);
+            return $this->injector->inject([$class, $method], $arguments);
         }
 
         public function implementsInterface(string $interface): array
@@ -130,8 +131,6 @@
 
             if ($finder->hasResults()) {
                 foreach ($finder as $file) {
-                    dump($file->getRealPath());
-
                     $file = new ReflectionFile($file->getRealPath());
 
                     foreach ($file->getClasses() as $class) {
