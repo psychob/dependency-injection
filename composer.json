@@ -5,11 +5,10 @@
     "require": {
         "php": "^7.2",
         "psr/container": "^1.0",
-        "psychob/reflection-file": "^0.2",
+        "psychob/reflection-file": "^1.0",
         "symfony/finder": "^4.3"
     },
     "require-dev": {
-        "mikey179/vfsstream": "^1.6",
         "mockery/mockery": "^1.2",
         "phpunit/phpunit": "^8.1",
         "symfony/var-dumper": "^4.3"
