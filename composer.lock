@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4bab04d7ae6acaf8a33b743c2b65faed",
+    "content-hash": "10a62d5f122238047d7b6f04ce989918",
     "packages": [
         {
             "name": "psr/container",
@@ -57,16 +57,16 @@
         },
         {
             "name": "psychob/reflection-file",
-            "version": "1.0",
+            "version": "1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/psychob/reflection-file.git",
-                "reference": "5fa5dbfe226caa119756136707c109fe563c590a"
+                "reference": "f353b8f686c4960e435b05071e0a25091d5c8262"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/psychob/reflection-file/zipball/5fa5dbfe226caa119756136707c109fe563c590a",
-                "reference": "5fa5dbfe226caa119756136707c109fe563c590a",
+                "url": "https://api.github.com/repos/psychob/reflection-file/zipball/f353b8f686c4960e435b05071e0a25091d5c8262",
+                "reference": "f353b8f686c4960e435b05071e0a25091d5c8262",
                 "shasum": ""
             },
             "require": {
@@ -95,7 +95,7 @@
                 }
             ],
             "description": "Reflection File implementation",
-            "time": "2019-06-26T19:34:28+00:00"
+            "time": "2019-07-03T08:48:33+00:00"
         },
         {
             "name": "symfony/finder",
