@@ -43,7 +43,7 @@
             $container = new Container();
 
             $container->autowirePath(__DIR__ . DIRECTORY_SEPARATOR . 'Mocks');
-            $mock = $container->inject(ClassWithConstructorArgument::class, [Arguments::anyArgument()]);
+            $mock = $container->make(ClassWithConstructorArgument::class, [Arguments::anyArgument()]);
 
             $this->assertInstanceOf(ClassWithConstructorArgument::class, $mock);
         }

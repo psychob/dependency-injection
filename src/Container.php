@@ -109,9 +109,9 @@
             return $new;
         }
 
-        public function inject(string $class, array $arguments = [])
+        public function inject($class, array $arguments = [])
         {
-            return $this->injectMethod($class, '__construct', $arguments);
+            return $this->injector->inject($class, $arguments);
         }
 
         public function injectMethod($class, string $method, array $arguments = [])

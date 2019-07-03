@@ -38,14 +38,14 @@
 
         public function testNotExistingConstructor()
         {
-            $containerMock = $this->container->inject(NotExistingConstructor::class);
+            $containerMock = $this->container->make(NotExistingConstructor::class);
 
             $this->assertInstanceOf(NotExistingConstructor::class, $containerMock);
         }
 
         public function testExistingEmptyConstructor()
         {
-            $containerMock = $this->container->inject(EmptyConstructor::class);
+            $containerMock = $this->container->make(EmptyConstructor::class);
 
             $this->assertInstanceOf(EmptyConstructor::class, $containerMock);
         }
@@ -53,7 +53,7 @@
         public function testExistingSimpleConstructor()
         {
             $this->assertFalse($this->container->has(EmptyConstructor::class));
-            $containerMock = $this->container->inject(ClassWithConstructorArgument::class);
+            $containerMock = $this->container->make(ClassWithConstructorArgument::class);
 
             $this->assertInstanceOf(ClassWithConstructorArgument::class, $containerMock);
             $this->assertTrue($this->container->has(EmptyConstructor::class));
@@ -61,7 +61,7 @@
 
         public function testExistingSimpleConstructorWithNamedArguments()
         {
-            $containerMock = $this->container->inject(ClassWithConstructorArgument::class,
+            $containerMock = $this->container->make(ClassWithConstructorArgument::class,
                                                       ['mock' => new EmptyConstructor()]);
 
             $this->assertInstanceOf(ClassWithConstructorArgument::class, $containerMock);
@@ -69,14 +69,14 @@
 
         public function testExistingSimpleConstructorWithPositionalArguments()
         {
-            $containerMock = $this->container->inject(ClassWithConstructorArgument::class, [new EmptyConstructor()]);
+            $containerMock = $this->container->make(ClassWithConstructorArgument::class, [new EmptyConstructor()]);
 
             $this->assertInstanceOf(ClassWithConstructorArgument::class, $containerMock);
         }
 
         public function testExistingSimpleConstructorWithAnyArgument()
         {
-            $containerMock = $this->container->inject(ClassWithConstructorArgument::class, [Arguments::anyArgument()]);
+            $containerMock = $this->container->make(ClassWithConstructorArgument::class, [Arguments::anyArgument()]);
 
             $this->assertInstanceOf(ClassWithConstructorArgument::class, $containerMock);
         }
@@ -104,7 +104,7 @@
         {
             $this->container->build(ComplexConstructor::class)->autoWire()->argument('foo')->literal(10);
 
-            $containerMock = $this->container->inject(ComplexConstructor::class, ['bar' => new EmptyConstructor()]);
+            $containerMock = $this->container->make(ComplexConstructor::class, ['bar' => new EmptyConstructor()]);
 
             $this->assertInstanceOf(ComplexConstructor::class, $containerMock);
         }
