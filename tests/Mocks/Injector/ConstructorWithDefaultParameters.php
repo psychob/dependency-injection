@@ -9,7 +9,12 @@
 
     class ConstructorWithDefaultParameters
     {
+        public $foo;
+        public $bar;
+
         public function __construct(int $foo = 12, $bar = "no type")
         {
+            $this->foo = $foo;
+            $this->bar = $bar;
         }
     }

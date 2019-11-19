@@ -31,4 +31,12 @@
 
             $this->assertInstanceOf($class, $injector->inject(sprintf('%s::__construct', $class), []));
         }
+
+        /** @dataProvider provideSimpleConstructorMocks */
+        public function testSimpleConstructorInjectionArraySyntax(string $class)
+        {
+            $injector = new Injector();
+
+            $this->assertInstanceOf($class, $injector->inject([$class, '__construct'], []));
+        }
     }
