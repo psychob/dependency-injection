@@ -72,11 +72,46 @@
             $this->injector->make(ProtectedConstructorMock::class);
         }
 
+        public function testMakeCanReportClassWithDisabledConstructor_Protected_CheckException()
+        {
+            /** @noinspection PhpUndefinedClassInspection PhpFullyQualifiedNameUsageInspection PhpUndefinedNamespaceInspection */
+            $wasThrown = false;
+
+            try {
+                $this->injector->make(ProtectedConstructorMock::class);
+            } catch (ClassCreationException $e) {
+                $wasThrown = true;
+
+                $this->assertSame("Class constructor is not public", $e->getMessage());
+                $this->assertSame(ProtectedConstructorMock::class, $e->getClassName());
+            }
+
+            $this->assertTrue($wasThrown);
+        }
+
         public function testMakeCanReportClassWithDisabledConstructor_Private()
         {
             $this->expectException(ClassCreationException::class);
             $this->expectExceptionMessage('Class constructor is not public');
+
             $this->injector->make(PrivateConstructorMock::class);
+        }
+
+        public function testMakeCanReportClassWithDisabledConstructor_Private_CheckException()
+        {
+            /** @noinspection PhpUndefinedClassInspection PhpFullyQualifiedNameUsageInspection PhpUndefinedNamespaceInspection */
+            $wasThrown = false;
+
+            try {
+                $this->injector->make(PrivateConstructorMock::class);
+            } catch (ClassCreationException $e) {
+                $wasThrown = true;
+
+                $this->assertSame("Class constructor is not public", $e->getMessage());
+                $this->assertSame(PrivateConstructorMock::class, $e->getClassName());
+            }
+
+            $this->assertTrue($wasThrown);
         }
 
         public function testMakeCanInjectDefaultConstructorParameters()
@@ -103,6 +138,23 @@
             $this->injector->make(CyclicConstructorMock::class);
         }
 
+        public function testMakeCanDetectCyclicDependencies_CheckException()
+        {
+            /** @noinspection PhpUndefinedClassInspection PhpFullyQualifiedNameUsageInspection PhpUndefinedNamespaceInspection */
+            $wasThrown = false;
+
+            try {
+                $this->injector->make(CyclicConstructorMock::class);
+            } catch (CyclicDependencyDetectedException $e) {
+                $wasThrown = true;
+
+                $this->assertSame("Cyclic dependency detected", $e->getMessage());
+                $this->assertSame([CyclicConstructorMock::class], $e->getCycle());
+            }
+
+            $this->assertTrue($wasThrown);
+        }
+
         public function testMakeWillReuseAlreadyCreatedClass()
         {
             $first = $this->injector->make(NoConstructorMock::class);
@@ -115,7 +167,25 @@
             $this->expectException(ClassCreationException::class);
             $this->expectExceptionMessage('Can\'t retrieve class metadata');
 
-            /** @noinspection PhpUndefinedClassInspection */
+            /** @noinspection PhpUndefinedClassInspection PhpFullyQualifiedNameUsageInspection PhpUndefinedNamespaceInspection */
             $this->injector->make(\UnknownNamespace\UnknownClass::class);
+        }
+
+        public function testMakeWillThrowWhenClassIsUnknown_CheckException()
+        {
+            /** @noinspection PhpUndefinedClassInspection PhpFullyQualifiedNameUsageInspection PhpUndefinedNamespaceInspection */
+            $loadClassName = \UnknownNamespace\UnknownClass::class;
+            $wasThrown = false;
+
+            try {
+                $this->injector->make($loadClassName);
+            } catch (ClassCreationException $e) {
+                $wasThrown = true;
+
+                $this->assertSame("Can't retrieve class metadata", $e->getMessage());
+                $this->assertSame($loadClassName, $e->getClassName());
+            }
+
+            $this->assertTrue($wasThrown);
         }
     }
