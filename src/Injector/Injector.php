@@ -27,6 +27,7 @@
             $this->container = $container;
         }
 
+        /** @inheritDoc */
         public function make(string $class, array $arguments = [])
         {
             // we won't make a new instance if we already have one in cache

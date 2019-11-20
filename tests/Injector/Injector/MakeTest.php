@@ -102,4 +102,20 @@
 
             $this->injector->make(CyclicConstructorMock::class);
         }
+
+        public function testMakeWillReuseAlreadyCreatedClass()
+        {
+            $first = $this->injector->make(NoConstructorMock::class);
+
+            $this->assertSame($first, $this->injector->make(NoConstructorMock::class));
+        }
+
+        public function testMakeWillThrowWhenClassIsUnknown()
+        {
+            $this->expectException(ClassCreationException::class);
+            $this->expectExceptionMessage('Can\'t retrieve class metadata');
+
+            /** @noinspection PhpUndefinedClassInspection */
+            $this->injector->make(\UnknownNamespace\UnknownClass::class);
+        }
     }
