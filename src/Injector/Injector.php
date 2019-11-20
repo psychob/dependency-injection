@@ -8,11 +8,14 @@
     namespace PsychoB\DependencyInjection\Injector;
 
     use PsychoB\DependencyInjection\Container\ContainerInterface;
+    use PsychoB\DependencyInjection\Injector\Exceptions\ClassCreationException;
+    use PsychoB\DependencyInjection\Injector\Exceptions\CyclicDependencyDetectedException;
 
     class Injector implements InjectorInterface
     {
         /** @var ContainerInterface */
         protected $container;
+        protected $currentlyConstructed = [];
 
         /**
          * Injector constructor.
@@ -22,6 +25,56 @@
         public function __construct(ContainerInterface $container)
         {
             $this->container = $container;
+        }
+
+        public function make(string $class, array $arguments = [])
+        {
+            // we won't make a new instance if we already have one in cache
+            if ($this->container->has($class)) {
+                return $this->container->get($class);
+            }
+
+            try {
+                if (in_array($class, $this->currentlyConstructed)) {
+                    throw new CyclicDependencyDetectedException('Cyclic dependency detected',
+                        $this->currentlyConstructed);
+                }
+
+                $this->currentlyConstructed[] = $class;
+
+                try {
+                    $refClass = new \ReflectionClass($class);
+                } catch (\ReflectionException $e) {
+                    throw new ClassCreationException("Can't retrieve class metadata", $class, $e);
+                }
+
+                $constructor = $refClass->getConstructor();
+                $newInstance = NULL;
+
+                if ($constructor === NULL) {
+                    // if class doesn't have a constructor, we assume we have implicit constructor created by PHP. For some
+                    // reason it's reported as NULL
+                    $newInstance = $this->createWith($refClass, $arguments);
+                } else {
+                    if ($constructor->isPublic()) {
+                        $args = $this->prepareArgs($refClass, $constructor, $arguments);
+                        $newInstance = $this->createWith($refClass, $args);
+                    } else {
+                        throw new ClassCreationException("Class constructor is not public", $class);
+                    }
+                }
+
+                $this->container->add($class, $newInstance, ContainerInterface::ADD_EXCEPTION);
+
+                return $newInstance;
+            } finally {
+                array_pop($this->currentlyConstructed);
+            }
+        }
+
+        private function createWith(\ReflectionClass $klass, array $arguments)
+        {
+            return $klass->newInstance(...$arguments);
         }
 
         /** @inheritDoc */
@@ -105,7 +158,7 @@
                                 $param, $refMethod, $klass);
                         }
                     } else {
-                        $ret[] = $this->fetchClassFor($param->getType()->getName(), $klass->getName());
+                        $ret[] = $this->make($param->getType()->getName());
                     }
                 } else {
                     throw new InvalidArgumentDefinitionException("Can't inject argument", $param, $refMethod, $klass);
@@ -113,18 +166,5 @@
             }
 
             return $ret;
-        }
-
-        private function fetchClassFor(string $children, string $parent)
-        {
-            if ($this->container->has($children)) {
-                return $this->container->get($children);
-            }
-
-            $c = $this->inject([$children, '__construct'], []);
-
-            $this->container->add($children, $c, ContainerInterface::ADD_EXCEPTION);
-
-            return $c;
         }
     }

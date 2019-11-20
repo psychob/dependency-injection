@@ -9,6 +9,18 @@
 
     interface InjectorInterface
     {
+        /**
+         * This method returns instance of $class. It might create new one, or reuse instance that is already created
+         * and cached.
+         *
+         * @param string $class     Class name
+         * @param array  $arguments Arguments passed to constructor
+         *
+         * @return object
+         */
+        public function make(string $class, array $arguments = []);
+
         public function inject($to, array $arguments);
+
         public function resolveArguments($to, array $arguments): array;
     }
