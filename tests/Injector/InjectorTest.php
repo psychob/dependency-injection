@@ -7,10 +7,12 @@
 
     namespace Tests\PsychoB\DependencyInjection\Injector;
 
+    use PsychoB\DependencyInjection\Container\Container;
     use PsychoB\DependencyInjection\Injector\Injector;
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\ConstructorWithDefaultParameters;
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\DefinedConstructorMock;
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\NoConstructorMock;
+    use Tests\PsychoB\DependencyInjection\Mocks\Injector\SimpleConstructorRequiringClassMock;
     use Tests\PsychoB\DependencyInjection\TestCase;
 
     class InjectorTest extends TestCase
@@ -21,13 +23,14 @@
                 [NoConstructorMock::class],
                 [DefinedConstructorMock::class],
                 [ConstructorWithDefaultParameters::class],
+                [SimpleConstructorRequiringClassMock::class],
             ];
         }
 
         /** @dataProvider provideSimpleConstructorMocks */
         public function testSimpleConstructorInjectionStringSyntax(string $class)
         {
-            $injector = new Injector();
+            $injector = new Injector(new Container());
 
             $this->assertInstanceOf($class, $injector->inject(sprintf('%s::__construct', $class), []));
         }
@@ -35,7 +38,7 @@
         /** @dataProvider provideSimpleConstructorMocks */
         public function testSimpleConstructorInjectionArraySyntax(string $class)
         {
-            $injector = new Injector();
+            $injector = new Injector(new Container());
 
             $this->assertInstanceOf($class, $injector->inject([$class, '__construct'], []));
         }

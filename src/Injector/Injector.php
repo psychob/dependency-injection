@@ -7,8 +7,23 @@
 
     namespace PsychoB\DependencyInjection\Injector;
 
+    use PsychoB\DependencyInjection\Container\ContainerInterface;
+
     class Injector implements InjectorInterface
     {
+        /** @var ContainerInterface */
+        protected $container;
+
+        /**
+         * Injector constructor.
+         *
+         * @param ContainerInterface $container
+         */
+        public function __construct(ContainerInterface $container)
+        {
+            $this->container = $container;
+        }
+
         /** @inheritDoc */
         public function inject($to, array $arguments)
         {
@@ -53,7 +68,7 @@
             if ($method === '__construct') {
                 $rMethod = $rKlass->getConstructor();
 
-                if ($rMethod === null) {
+                if ($rMethod === NULL) {
                     return $this->createFrom($rKlass, []);
                 }
 
@@ -68,8 +83,48 @@
             return $rKlass->newInstance(...$array);
         }
 
-        private function prepareArgs(\ReflectionClass $klass, \ReflectionFunctionAbstract $refMethod, array $arguments): array
+        private function prepareArgs(\ReflectionClass $klass,
+            \ReflectionFunctionAbstract $refMethod,
+            array $arguments): array
         {
-            return [];
+            $ret = [];
+
+            foreach ($refMethod->getParameters() as $it => $param) {
+                if (array_key_exists($it, $arguments)) {
+                    $ret[] = $arguments[$it];
+                } else if (array_key_exists($param->getName(), $arguments)) {
+                    $ret[] = $arguments[$param->getName()];
+                } else if ($param->isDefaultValueAvailable()) {
+                    $ret[] = $param->getDefaultValue();
+                } else if ($param->hasType()) {
+                    if ($param->getType()->isBuiltin()) {
+                        if ($param->getType()->allowsNull()) {
+                            $ret[] = NULL;
+                        } else {
+                            throw new InvalidArgumentDefinitionException("Builtin types are not injectable by itself",
+                                $param, $refMethod, $klass);
+                        }
+                    } else {
+                        $ret[] = $this->fetchClassFor($param->getType()->getName(), $klass->getName());
+                    }
+                } else {
+                    throw new InvalidArgumentDefinitionException("Can't inject argument", $param, $refMethod, $klass);
+                }
+            }
+
+            return $ret;
+        }
+
+        private function fetchClassFor(string $children, string $parent)
+        {
+            if ($this->container->has($children)) {
+                return $this->container->get($children);
+            }
+
+            $c = $this->inject([$children, '__construct'], []);
+
+            $this->container->add($children, $c, ContainerInterface::ADD_EXCEPTION);
+
+            return $c;
         }
     }
