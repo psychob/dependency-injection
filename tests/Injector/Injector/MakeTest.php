@@ -7,11 +7,10 @@
 
     namespace Tests\PsychoB\DependencyInjection\Injector\Injector;
 
-    use PsychoB\DependencyInjection\Container\ContainerInterface;
     use PsychoB\DependencyInjection\Injector\Exceptions\ClassCreationException;
     use PsychoB\DependencyInjection\Injector\Exceptions\CyclicDependencyDetectedException;
-    use PsychoB\DependencyInjection\Injector\Injector;
-    use Tests\PsychoB\DependencyInjection\Mocks\Container\ContainerMock;
+    use PsychoB\DependencyInjection\Injector\Exceptions\MetadataException;
+    use Tests\PsychoB\DependencyInjection\Injector\InjectorTestCase;
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\ConstructorWithDefaultParameters;
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\CyclicConstructorMock;
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\DefinedConstructorMock;
@@ -19,37 +18,9 @@
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\PrivateConstructorMock;
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\ProtectedConstructorMock;
     use Tests\PsychoB\DependencyInjection\Mocks\Injector\SimpleConstructorRequiringClassMock;
-    use Tests\PsychoB\DependencyInjection\TestCase;
 
-    class MakeTest extends TestCase
+    class MakeTest extends InjectorTestCase
     {
-        /** @var ContainerInterface */
-        protected $container;
-
-        /** @var Injector */
-        protected $injector;
-
-        protected function setUp(): void
-        {
-            parent::setUp();
-
-            $this->container = new ContainerMock();
-            $this->injector = new Injector($this->container);
-        }
-
-        protected function tearDown(): void
-        {
-            $this->injector = NULL;
-            $this->container = NULL;
-
-            parent::tearDown();
-        }
-
-        private function assertContainerHas(string $class): void
-        {
-            $this->assertTrue($this->container->has($class));
-        }
-
         public function testMakeCanCreateClassWithNoConstructor()
         {
             $this->assertInstanceOf(NoConstructorMock::class, $this->injector->make(NoConstructorMock::class));
@@ -164,7 +135,7 @@
 
         public function testMakeWillThrowWhenClassIsUnknown()
         {
-            $this->expectException(ClassCreationException::class);
+            $this->expectException(MetadataException::class);
             $this->expectExceptionMessage('Can\'t retrieve class metadata');
 
             /** @noinspection PhpUndefinedClassInspection PhpFullyQualifiedNameUsageInspection PhpUndefinedNamespaceInspection */
@@ -179,11 +150,12 @@
 
             try {
                 $this->injector->make($loadClassName);
-            } catch (ClassCreationException $e) {
+            } catch (MetadataException $e) {
                 $wasThrown = true;
 
                 $this->assertSame("Can't retrieve class metadata", $e->getMessage());
                 $this->assertSame($loadClassName, $e->getClassName());
+                $this->assertSame('__construct', $e->getMethodName());
             }
 
             $this->assertTrue($wasThrown);

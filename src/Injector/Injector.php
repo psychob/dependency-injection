@@ -10,6 +10,7 @@
     use PsychoB\DependencyInjection\Container\ContainerInterface;
     use PsychoB\DependencyInjection\Injector\Exceptions\ClassCreationException;
     use PsychoB\DependencyInjection\Injector\Exceptions\CyclicDependencyDetectedException;
+    use PsychoB\DependencyInjection\Injector\Exceptions\MetadataException;
 
     class Injector implements InjectorInterface
     {
@@ -28,58 +29,7 @@
         }
 
         /** @inheritDoc */
-        public function make(string $class, array $arguments = [])
-        {
-            // we won't make a new instance if we already have one in cache
-            if ($this->container->has($class)) {
-                return $this->container->get($class);
-            }
-
-            try {
-                if (in_array($class, $this->currentlyConstructed)) {
-                    throw new CyclicDependencyDetectedException('Cyclic dependency detected',
-                        $this->currentlyConstructed);
-                }
-
-                $this->currentlyConstructed[] = $class;
-
-                try {
-                    $refClass = new \ReflectionClass($class);
-                } catch (\ReflectionException $e) {
-                    throw new ClassCreationException("Can't retrieve class metadata", $class, $e);
-                }
-
-                $constructor = $refClass->getConstructor();
-                $newInstance = NULL;
-
-                if ($constructor === NULL) {
-                    // if class doesn't have a constructor, we assume we have implicit constructor created by PHP. For some
-                    // reason it's reported as NULL
-                    $newInstance = $this->createWith($refClass, $arguments);
-                } else {
-                    if ($constructor->isPublic()) {
-                        $args = $this->prepareArgs($refClass, $constructor, $arguments);
-                        $newInstance = $this->createWith($refClass, $args);
-                    } else {
-                        throw new ClassCreationException("Class constructor is not public", $class);
-                    }
-                }
-
-                $this->container->add($class, $newInstance, ContainerInterface::ADD_EXCEPTION);
-
-                return $newInstance;
-            } finally {
-                array_pop($this->currentlyConstructed);
-            }
-        }
-
-        private function createWith(\ReflectionClass $klass, array $arguments)
-        {
-            return $klass->newInstance(...$arguments);
-        }
-
-        /** @inheritDoc */
-        public function inject($to, array $arguments)
+        public function inject($to, array $arguments = [])
         {
             if (is_array($to)) {
                 if (count($to) === 2) {
@@ -111,30 +61,80 @@
         }
 
         /** @inheritDoc */
-        public function resolveArguments($to, array $arguments): array
+        public function make(string $class, array $arguments = [])
         {
+            // we won't make a new instance if we already have one in cache
+            if ($this->container->has($class)) {
+                return $this->container->get($class);
+            }
+
+            try {
+                if (in_array($class, $this->currentlyConstructed)) {
+                    throw new CyclicDependencyDetectedException('Cyclic dependency detected',
+                        $this->currentlyConstructed);
+                }
+
+                $this->currentlyConstructed[] = $class;
+
+                try {
+                    $refClass = new \ReflectionClass($class);
+                } catch (\ReflectionException $e) {
+                    throw MetadataException::class($class, '__construct', $e);
+                }
+
+                $constructor = $refClass->getConstructor();
+                $newInstance = NULL;
+
+                if ($constructor === NULL) {
+                    // if class doesn't have a constructor, we assume we have implicit constructor created by PHP. For some
+                    // reason it's reported as NULL
+                    $newInstance = $this->createWith($refClass, $arguments);
+                } else {
+                    if (!$constructor->isPublic()) {
+                        throw new ClassCreationException("Class constructor is not public", $class);
+                    }
+
+                    $args = $this->prepareArgs($refClass, $constructor, $arguments);
+                    $newInstance = $this->createWith($refClass, $args);
+                }
+
+                $this->container->add($class, $newInstance, ContainerInterface::ADD_EXCEPTION);
+
+                return $newInstance;
+            } finally {
+                array_pop($this->currentlyConstructed);
+            }
+        }
+
+        private function createWith(\ReflectionClass $klass, array $arguments)
+        {
+            return $klass->newInstance(...$arguments);
         }
 
         private function injectIntoStaticString(string $class, string $method, array $arguments)
         {
-            $rKlass = new \ReflectionClass($class);
-
             if ($method === '__construct') {
-                $rMethod = $rKlass->getConstructor();
-
-                if ($rMethod === NULL) {
-                    return $this->createFrom($rKlass, []);
-                }
-
-                $preparedArguments = $this->prepareArgs($rKlass, $rMethod, $arguments);
-
-                return $this->createFrom($rKlass, $preparedArguments);
+                return $this->make($class, $arguments);
             }
-        }
 
-        private function createFrom(\ReflectionClass $rKlass, array $array)
-        {
-            return $rKlass->newInstance(...$array);
+            try {
+                $refClass = new \ReflectionClass($class);
+            } catch (\ReflectionException $e) {
+                throw MetadataException::class($class, $method, $e);
+            }
+
+            try {
+                $refMethod = $refClass->getMethod($method);
+            } catch (\ReflectionException $e) {
+                throw MetadataException::method($class, $method, $e);
+            }
+
+            if (!$refMethod->isStatic()) {
+                throw new InjectionException("Can't inject to non static method from static context", $class, $method);
+            }
+
+            $args = $this->prepareArgs($refClass, $refMethod, $arguments);
+            return $this->executeWith($refClass, $refMethod, $args);
         }
 
         private function prepareArgs(\ReflectionClass $klass,

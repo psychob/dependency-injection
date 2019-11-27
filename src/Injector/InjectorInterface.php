@@ -20,7 +20,5 @@
          */
         public function make(string $class, array $arguments = []);
 
-        public function inject($to, array $arguments);
-
-        public function resolveArguments($to, array $arguments): array;
+        public function inject($to, array $arguments = []);
     }
