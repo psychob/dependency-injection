@@ -10,6 +10,7 @@
     use PsychoB\DependencyInjection\Container\ContainerInterface;
     use PsychoB\DependencyInjection\Injector\Exceptions\ClassCreationException;
     use PsychoB\DependencyInjection\Injector\Exceptions\CyclicDependencyDetectedException;
+    use PsychoB\DependencyInjection\Injector\Exceptions\InjectionException;
     use PsychoB\DependencyInjection\Injector\Exceptions\MetadataException;
 
     class Injector implements InjectorInterface
